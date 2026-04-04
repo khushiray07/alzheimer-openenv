@@ -8,6 +8,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
 import uvicorn
@@ -46,13 +48,8 @@ class StepRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Routes
+# API Routes  (must be defined BEFORE the static catch-all)
 # ---------------------------------------------------------------------------
-
-@app.get("/")
-def root():
-    return {"message": "AlzheimerEnv is running", "status": "ok"}
-
 
 @app.get("/health")
 def health():
@@ -92,6 +89,27 @@ def step(request: StepRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Static files — served from ./static (React build output)
+# Only mounted when the build exists (Docker); skipped in bare local dev.
+# ---------------------------------------------------------------------------
+
+_static_dir = os.path.join(os.path.dirname(__file__), "static")
+
+if os.path.isdir(os.path.join(_static_dir, "assets")):
+    app.mount("/assets", StaticFiles(directory=os.path.join(_static_dir, "assets")), name="assets")
+
+
+# Catch-all: serve index.html for any unmatched path (React client-side routing)
+@app.get("/{full_path:path}")
+async def serve_frontend(full_path: str):
+    index = os.path.join(_static_dir, "index.html")
+    if os.path.isfile(index):
+        return FileResponse(index)
+    # Fallback when no static build present (local dev without Docker)
+    return {"message": "AlzheimerEnv is running", "status": "ok"}
 
 
 # ---------------------------------------------------------------------------
