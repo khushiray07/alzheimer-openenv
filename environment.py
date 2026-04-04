@@ -136,10 +136,11 @@ class AlzheimerEnv:
             reward = grader.grade(self.patient, parsed)
 
         elif self.task_id == 2:
-            parsed = handler.parse_action(action)
+            parsed = handler.parse_action(action, available_genes=list(self.patient["genes"].keys()))
             reward = grader.grade(parsed, self.step_count, self.max_steps)
             info = {
                 "ranking": parsed.get("ranking", []),
+                "invalid_genes": parsed.get("invalid_genes", []),
                 "valid": parsed.get("valid", False),
                 "overlap": Task2BiomarkerRanking.compute_overlap(
                     parsed.get("ranking", []),
@@ -156,10 +157,15 @@ class AlzheimerEnv:
                     old_risk, parsed["gene"], parsed["direction"], self.patient["genes"]
                 )
             new_risk = self.current_risk
-            reward = grader.grade(old_risk, new_risk, parsed, self.step_count, self.max_steps)
+            reward = grader.grade(
+                old_risk, new_risk, parsed,
+                self.step_count, self.max_steps,
+                patient_genes=self.patient["genes"],
+            )
             info = {
                 "old_risk": old_risk,
                 "new_risk": new_risk,
+                "risk_delta": round(old_risk - new_risk, 2),
                 "target_risk": 40.0,
                 "gene": parsed.get("gene", ""),
                 "direction": parsed.get("direction", ""),
