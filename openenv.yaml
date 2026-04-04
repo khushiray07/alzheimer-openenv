@@ -1,0 +1,36 @@
+name: AlzheimerEnv
+version: "1.0.0"
+description: >
+  A real-world OpenEnv environment for Alzheimer's disease prediction and
+  gene expression intervention planning using transcriptomic data.
+author: "Hackathon Participant"
+task_type: classification_and_planning
+observation_space:
+  type: dict
+  fields:
+    patient_id: str
+    risk_score: float
+    gene_expression: dict
+    step: int
+    max_steps: int
+action_space:
+  type: str
+  description: "classify:AD|Control | rank:[G1,G2,G3] | downregulate:GENE | upregulate:GENE"
+reward_range: [0.0, 1.0]
+tasks:
+  - id: 1
+    name: risk_classification
+    difficulty: easy
+    max_steps: 3
+  - id: 2
+    name: biomarker_ranking
+    difficulty: medium
+    max_steps: 5
+  - id: 3
+    name: intervention_planning
+    difficulty: hard
+    max_steps: 8
+env_vars:
+  - API_BASE_URL
+  - MODEL_NAME
+  - HF_TOKEN
