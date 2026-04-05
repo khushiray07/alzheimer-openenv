@@ -26,7 +26,7 @@ dependencies = [
 ]
 
 [project.scripts]
-server = "server:main"
+server = "server.app:main"
 inference = "inference:main"
 
 [project.urls]
@@ -35,4 +35,4 @@ Repository = "https://github.com/khushiray07/alzheimer-openenv"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["tasks*", "graders*"]
+include = ["tasks*", "graders*", "server*"]

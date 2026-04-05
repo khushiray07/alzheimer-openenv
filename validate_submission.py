@@ -267,7 +267,7 @@ print("\n── File existence ──")
 BASE = os.path.dirname(__file__)
 
 for fname in [
-    "inference.py", "Dockerfile", "server.py", "environment.py",
+    "inference.py", "Dockerfile", "server/app.py", "environment.py",
     "tasks/task1_classify.py", "tasks/task2_biomarker.py", "tasks/task3_intervene.py",
     "graders/grader1.py", "graders/grader2.py", "graders/grader3.py",
     "requirements.txt", "openenv.yaml",

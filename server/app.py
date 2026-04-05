@@ -4,7 +4,7 @@ import sys
 import os
 
 # Ensure local modules are importable
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
@@ -148,7 +148,7 @@ def step(request: Optional[StepRequest] = Body(default=None)):
 # Only mounted when the build exists (Docker); skipped in bare local dev.
 # ---------------------------------------------------------------------------
 
-_static_dir = os.path.join(os.path.dirname(__file__), "static")
+_static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
 
 if os.path.isdir(os.path.join(_static_dir, "assets")):
     app.mount("/assets", StaticFiles(directory=os.path.join(_static_dir, "assets")), name="assets")
@@ -168,5 +168,9 @@ async def serve_frontend(full_path: str):
 # Entry point
 # ---------------------------------------------------------------------------
 
+def main():
+    uvicorn.run("server.app:app", host="0.0.0.0", port=7860, reload=False)
+
+
 if __name__ == "__main__":
-    uvicorn.run("server:app", host="0.0.0.0", port=7860, reload=False)
+    main()

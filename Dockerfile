@@ -28,4 +28,4 @@ ENV API_BASE_URL="https://api.anthropic.com"
 ENV MODEL_NAME="claude-haiku-4-5-20251001"
 # HF_TOKEN has no default — must be injected as a secret
 
-CMD ["python", "server.py"]
+CMD ["python", "-m", "uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]
