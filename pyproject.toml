@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "alzheimer-openenv"
+version = "1.0.0"
+description = "OpenEnv RL environment for Alzheimer's disease prediction and gene expression intervention planning"
+authors = [
+    {name = "Hackathon Participant"}
+]
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+keywords = ["openenv", "reinforcement-learning", "alzheimer", "genomics", "bioinformatics"]
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "numpy",
+    "scikit-learn",
+    "openai",
+    "requests",
+    "python-dotenv",
+]
+
+[project.urls]
+Homepage = "https://huggingface.co/spaces/khushiray16/AlzheimerEnv"
+Repository = "https://github.com/khushiray07/alzheimer-openenv"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tasks*", "graders*"]
