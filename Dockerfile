@@ -24,8 +24,8 @@ COPY --from=frontend-build /frontend/dist ./static
 
 EXPOSE 7860
 
-ENV API_BASE_URL=""
+ENV API_BASE_URL="https://api.anthropic.com"
 ENV MODEL_NAME="claude-haiku-4-5-20251001"
-ENV HF_TOKEN=""
+# HF_TOKEN has no default — must be injected as a secret
 
 CMD ["python", "server.py"]
