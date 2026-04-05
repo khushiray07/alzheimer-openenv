@@ -100,23 +100,19 @@ export default function AlzheimerEnvUI() {
   };
 
   const callAPI = async (envState) => {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        system: `You are an AI agent in AlzheimerEnv, an OpenEnv real-world RL environment for Alzheimer's disease research.
+    const systemPrompt = `You are an AI agent in AlzheimerEnv, an OpenEnv real-world RL environment for Alzheimer's disease research.
 ${task.agentPrompt}
 Respond ONLY with valid JSON — no markdown, no extra text:
-{"action":"your_action","reasoning":"max 85 chars","confidence":0.XX}`,
-        messages: [{ role: "user", content: `State: ${JSON.stringify(envState)}` }]
-      })
+{"action":"your_action","reasoning":"max 85 chars","confidence":0.XX}`;
+
+    // Call backend /agent proxy to avoid CORS
+    const base = window.location.origin;
+    const res = await fetch(`${base}/agent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ env_state: envState, system_prompt: systemPrompt, task_id: task.id })
     });
-    const data = await res.json();
-    const raw = data.content?.find(b => b.type === "text")?.text || "{}";
-    try { return JSON.parse(raw.replace(/```json|```/g, "").trim()); }
-    catch { return { action: "analyze_expression", reasoning: "Evaluating gene expression patterns", confidence: 0.74 }; }
+    return await res.json();
   };
 
   const runAgent = async () => {
