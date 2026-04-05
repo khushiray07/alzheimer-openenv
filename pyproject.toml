@@ -10,7 +10,7 @@ authors = [
     {name = "Hackathon Participant"}
 ]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 keywords = ["openenv", "reinforcement-learning", "alzheimer", "genomics", "bioinformatics"]
 dependencies = [
@@ -22,7 +22,12 @@ dependencies = [
     "openai",
     "requests",
     "python-dotenv",
+    "openenv-core>=0.2.0",
 ]
+
+[project.scripts]
+server = "server:main"
+inference = "inference:main"
 
 [project.urls]
 Homepage = "https://huggingface.co/spaces/khushiray16/AlzheimerEnv"
