@@ -22,10 +22,11 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 API_BASE_URL = os.environ.get("API_BASE_URL", "https://api.anthropic.com")
 MODEL_NAME = os.environ.get("MODEL_NAME", "claude-haiku-4-5-20251001")
-HF_TOKEN = os.environ.get("HF_TOKEN", "")
+HF_TOKEN = os.environ.get("HF_TOKEN")          # No default — must be set externally
+LOCAL_IMAGE_NAME = os.environ.get("LOCAL_IMAGE_NAME")  # Optional, for from_docker_image()
 
-# Anthropic SDK uses ANTHROPIC_API_KEY; map HF_TOKEN if needed
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", HF_TOKEN)
+# Use HF_TOKEN as the API key (passed to OpenAI client)
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY") or HF_TOKEN
 
 # ---------------------------------------------------------------------------
 # Task configuration
