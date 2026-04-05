@@ -6,7 +6,7 @@ import os
 # Ensure local modules are importable
 sys.path.insert(0, os.path.dirname(__file__))
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -76,7 +76,9 @@ def get_state():
 
 
 @app.post("/reset")
-def reset(request: ResetRequest):
+def reset(request: Optional[ResetRequest] = Body(default=None)):
+    if request is None:
+        request = ResetRequest()
     try:
         state = env.reset(task_id=request.task_id, patient_id=request.patient_id)
         return state
@@ -129,7 +131,9 @@ def agent(request: AgentRequest):
 
 
 @app.post("/step")
-def step(request: StepRequest):
+def step(request: Optional[StepRequest] = Body(default=None)):
+    if request is None:
+        raise HTTPException(status_code=400, detail="action field is required")
     try:
         result = env.step(request.action)
         return result
