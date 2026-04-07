@@ -51,13 +51,13 @@ class Grader3:
         # Progress toward target
         max_reduction = old_risk - TARGET
         if max_reduction <= 0:
-            return 1.0  # Already at or below target
+            return 0.99  # Already at or below target
 
         progress = min(1.0, reduction / max_reduction)
 
         # Reached target: full reward regardless of steps
         if new_risk <= TARGET:
-            return round(min(1.0, 0.95 + bio_bonus), 3)
+            return round(min(0.99, 0.95 + bio_bonus), 3)
 
         # Step efficiency: earlier progress = better score
         # Step 1 of 8: efficiency=1.0, Step 8 of 8: efficiency=0.88

@@ -172,7 +172,8 @@ class AlzheimerEnv:
                 "valid": parsed.get("valid", False),
             }
 
-        reward = float(round(max(0.0, min(1.0, reward)), 4))
+        # Scores must be strictly between 0 and 1 (exclusive)
+        reward = float(round(max(0.01, min(0.99, reward)), 4))
         self.cumulative_reward += reward
 
         # Determine done

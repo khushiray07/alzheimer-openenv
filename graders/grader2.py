@@ -37,4 +37,4 @@ class Grader2:
         # Step efficiency bonus: earlier correct answer = more reward
         efficiency_bonus = max(0, (1 - step / max_steps)) * 0.15
 
-        return round(min(1.0, content_score + efficiency_bonus), 3)
+        return round(min(0.99, content_score + efficiency_bonus), 3)
