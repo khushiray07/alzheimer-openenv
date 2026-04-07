@@ -35,7 +35,7 @@ class Task3InterventionPlanning:
             "patient_id": patient["id"],
             "risk_score": current_risk,
             "target_risk": TARGET_RISK,
-            "risk_reduction_needed": max(0.0, round(current_risk - TARGET_RISK, 2)),
+            "risk_reduction_needed": max(0.01, round(current_risk - TARGET_RISK, 2)),
             "age": patient["age"],
             "stage": patient["stage"],
             "gene_expression": dict(genes),

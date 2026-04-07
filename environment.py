@@ -3,6 +3,24 @@
 import random
 from typing import Optional
 
+
+def _sanitize(obj):
+    """Recursively ensure no float value is exactly 0.0 or 1.0.
+    Replaces 0.0 → 0.01 and 1.0 → 0.99 for any float."""
+    if isinstance(obj, dict):
+        return {k: _sanitize(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_sanitize(v) for v in obj]
+    elif isinstance(obj, bool):
+        return obj
+    elif isinstance(obj, float):
+        if obj == 0.0:
+            return 0.01
+        elif obj == 1.0:
+            return 0.99
+        return obj
+    return obj
+
 from tasks.task1_classify import Task1RiskClassification
 from tasks.task2_biomarker import Task2BiomarkerRanking
 from tasks.task3_intervene import Task3InterventionPlanning
@@ -108,19 +126,19 @@ class AlzheimerEnv:
 
         self.current_risk = float(self.patient["risk_score"])
         self._initialized = True
-        return self.state()
+        return _sanitize(self.state())
 
     def step(self, action: str) -> dict:
         """Execute one action in the environment."""
         if not self._initialized:
             raise RuntimeError("Call reset() before step().")
         if self.done:
-            return {
+            return _sanitize({
                 "observation": self.state(),
                 "reward": 0.01,
                 "done": True,
                 "info": {"error": "Episode already done. Call reset()."},
-            }
+            })
 
         task_cfg = TASK_REGISTRY[self.task_id]
         handler = task_cfg["handler"]
@@ -197,12 +215,12 @@ class AlzheimerEnv:
         })
 
         observation = self._build_observation()
-        return {
+        return _sanitize({
             "observation": observation,
             "reward": reward,
             "done": self.done,
             "info": info,
-        }
+        })
 
     def state(self) -> dict:
         """Return current environment state."""

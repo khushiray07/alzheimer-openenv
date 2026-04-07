@@ -16,6 +16,24 @@ import uvicorn
 
 from environment import AlzheimerEnv
 
+
+def _sanitize(obj):
+    """Recursively ensure no float value is exactly 0.0 or 1.0 in API responses.
+    Replaces 0.0 → 0.01 and 1.0 → 0.99 for any float. Leaves ints/bools/strings alone."""
+    if isinstance(obj, dict):
+        return {k: _sanitize(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_sanitize(v) for v in obj]
+    elif isinstance(obj, bool):
+        return obj  # must check before int since bool is subclass of int
+    elif isinstance(obj, float):
+        if obj == 0.0:
+            return 0.01
+        elif obj == 1.0:
+            return 0.99
+        return obj
+    return obj
+
 app = FastAPI(
     title="AlzheimerEnv",
     description="OpenEnv RL environment for Alzheimer's disease prediction and intervention.",
@@ -70,7 +88,7 @@ def list_tasks():
 @app.get("/state")
 def get_state():
     try:
-        return env.state()
+        return _sanitize(env.state())
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -81,7 +99,7 @@ def reset(request: Optional[ResetRequest] = Body(default=None)):
         request = ResetRequest()
     try:
         state = env.reset(task_id=request.task_id, patient_id=request.patient_id)
-        return state
+        return _sanitize(state)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -136,10 +154,7 @@ def step(request: Optional[StepRequest] = Body(default=None)):
         raise HTTPException(status_code=400, detail="action field is required")
     try:
         result = env.step(request.action)
-        # Final safety: ensure reward is strictly between 0 and 1 (exclusive)
-        if "reward" in result:
-            result["reward"] = float(round(max(0.01, min(0.99, result["reward"])), 4))
-        return result
+        return _sanitize(result)
     except RuntimeError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
