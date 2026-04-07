@@ -75,6 +75,8 @@ class Task2BiomarkerRanking:
             gold = GOLD_RANKING
         k = min(k, len(predicted_ranking), len(gold))
         if k == 0:
-            return 0.0
+            return 0.01
         overlap = len(set(predicted_ranking[:k]) & set(gold[:k]))
-        return round(overlap / k, 4)
+        raw = overlap / k
+        # Clamp to strict (0, 1) interval
+        return float(round(max(0.01, min(0.99, raw)), 4))

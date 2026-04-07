@@ -39,8 +39,9 @@ class Task1RiskClassification:
         true_label = "AD" if patient["label"] == 1 else "Control"
         predicted = parsed_action.get("prediction", "")
         correct = predicted == true_label
+        # Return score as clamped float, not boolean (evaluator requires (0,1))
         return {
-            "correct": correct,
+            "correct": 0.95 if correct else 0.05,
             "true_label": true_label,
             "predicted": predicted,
         }

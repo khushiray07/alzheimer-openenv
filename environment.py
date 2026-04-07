@@ -132,21 +132,27 @@ class AlzheimerEnv:
 
         if self.task_id == 1:
             parsed = handler.parse_action(action)
-            info = handler.compute_info(self.patient, parsed)
+            raw_info = handler.compute_info(self.patient, parsed)
             reward = grader.grade(self.patient, parsed)
+            info = {
+                "correct": 0.95 if raw_info.get("correct") else 0.05,
+                "true_label": raw_info.get("true_label", ""),
+                "predicted": raw_info.get("predicted", ""),
+            }
 
         elif self.task_id == 2:
             parsed = handler.parse_action(action, available_genes=list(self.patient["genes"].keys()))
             reward = grader.grade(parsed, self.step_count, self.max_steps)
+            raw_overlap = Task2BiomarkerRanking.compute_overlap(
+                parsed.get("ranking", []),
+                ["APOE", "APP", "PSEN1", "MAPT", "BACE1"],
+                k=3,
+            )
             info = {
                 "ranking": parsed.get("ranking", []),
                 "invalid_genes": parsed.get("invalid_genes", []),
-                "valid": parsed.get("valid", False),
-                "overlap": Task2BiomarkerRanking.compute_overlap(
-                    parsed.get("ranking", []),
-                    ["APOE", "APP", "PSEN1", "MAPT", "BACE1"],
-                    k=3,
-                ),
+                "valid": 0.95 if parsed.get("valid") else 0.05,
+                "overlap": float(round(max(0.01, min(0.99, raw_overlap)), 4)),
             }
 
         elif self.task_id == 3:
@@ -162,14 +168,15 @@ class AlzheimerEnv:
                 self.step_count, self.max_steps,
                 patient_genes=self.patient["genes"],
             )
+            raw_delta = round(old_risk - new_risk, 2)
             info = {
                 "old_risk": old_risk,
                 "new_risk": new_risk,
-                "risk_delta": round(old_risk - new_risk, 2),
+                "risk_delta": raw_delta if raw_delta not in (0.0, 1.0) else 0.01,
                 "target_risk": 40.0,
                 "gene": parsed.get("gene", ""),
                 "direction": parsed.get("direction", ""),
-                "valid": parsed.get("valid", False),
+                "valid": 0.95 if parsed.get("valid") else 0.05,
             }
 
         # Scores must be strictly between 0 and 1 (exclusive)
