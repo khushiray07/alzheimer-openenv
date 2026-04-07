@@ -6,3 +6,4 @@ scikit-learn
 openai
 requests
 python-dotenv
+pyyaml

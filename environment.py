@@ -117,7 +117,7 @@ class AlzheimerEnv:
         if self.done:
             return {
                 "observation": self.state(),
-                "reward": 0.0,
+                "reward": 0.01,
                 "done": True,
                 "info": {"error": "Episode already done. Call reset()."},
             }
