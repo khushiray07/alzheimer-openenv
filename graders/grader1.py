@@ -26,7 +26,7 @@ class Grader1:
                 # Lower risk = more obvious Control case = higher reward
                 # Risk 18 → ~0.97, Risk 23 → ~0.95
                 base = 0.75 + min(0.24, (70 - risk) / 400)
-            return round(min(0.99, base), 3)
+            return round(max(0.01, min(0.99, base)), 3)
         else:
             # Wrong prediction — penalty proportional to how obvious the case was
             if risk >= 70 or risk <= 25:

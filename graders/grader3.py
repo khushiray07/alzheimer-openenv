@@ -57,11 +57,11 @@ class Grader3:
 
         # Reached target: full reward regardless of steps
         if new_risk <= TARGET:
-            return round(min(0.99, 0.95 + bio_bonus), 3)
+            return round(max(0.01, min(0.99, 0.95 + bio_bonus)), 3)
 
         # Step efficiency: earlier progress = better score
         # Step 1 of 8: efficiency=1.0, Step 8 of 8: efficiency=0.88
         efficiency = 1.0 - (step / max_steps) * 0.12
 
         base = progress * efficiency * 0.90
-        return round(min(0.94, base + bio_bonus), 3)
+        return round(max(0.01, min(0.99, base + bio_bonus)), 3)
