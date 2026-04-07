@@ -136,6 +136,9 @@ def step(request: Optional[StepRequest] = Body(default=None)):
         raise HTTPException(status_code=400, detail="action field is required")
     try:
         result = env.step(request.action)
+        # Final safety: ensure reward is strictly between 0 and 1 (exclusive)
+        if "reward" in result:
+            result["reward"] = float(round(max(0.01, min(0.99, result["reward"])), 4))
         return result
     except RuntimeError as e:
         raise HTTPException(status_code=400, detail=str(e))
