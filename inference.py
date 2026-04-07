@@ -189,7 +189,7 @@ def main():
             results.append(summary)
         except Exception as exc:
             print(f"[ERROR] task_id={task_id} error={exc}", flush=True)
-            results.append({"task_id": task_id, "score": 0.0})
+            results.append({"task_id": task_id, "score": 0.01})
 
     # Summary
     total_score = sum(r.get("score", 0.0) for r in results)

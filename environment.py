@@ -224,7 +224,7 @@ class AlzheimerEnv:
 
     def state(self) -> dict:
         """Return current environment state."""
-        return {
+        return _sanitize({
             "task_id": self.task_id,
             "patient_id": self.patient["id"],
             "risk_score": self.current_risk,
@@ -234,7 +234,7 @@ class AlzheimerEnv:
             "cumulative_reward": round(self.cumulative_reward, 4),
             "done": self.done,
             "history": self.history,
-        }
+        })
 
     def list_tasks(self) -> list:
         """Return all task definitions."""

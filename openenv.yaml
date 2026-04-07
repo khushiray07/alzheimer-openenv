@@ -16,7 +16,7 @@ observation_space:
 action_space:
   type: str
   description: "classify:AD|Control | rank:[G1,G2,G3] | downregulate:GENE | upregulate:GENE"
-reward_range: [0.0, 1.0]
+reward_range: [0.01, 0.99]
 tasks:
   - id: 1
     name: risk_classification

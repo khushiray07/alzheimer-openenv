@@ -103,7 +103,7 @@ def _step_task1_valid():
     assert "done" in result, "Missing done"
     assert "info" in result, "Missing info"
     r = result["reward"]
-    assert 0.0 <= r <= 1.0, f"Reward out of range: {r}"
+    assert 0.0 < r < 1.0, f"Reward out of range: {r}"
 
 
 check("step('classify:AD') returns valid result", _step_task1_valid)
@@ -113,7 +113,7 @@ def _step_task1_control():
     env_instance.reset(task_id=1, patient_id="PT-002")
     result = env_instance.step("classify:Control")
     r = result["reward"]
-    assert 0.0 <= r <= 1.0, f"Reward out of range: {r}"
+    assert 0.0 < r < 1.0, f"Reward out of range: {r}"
 
 
 check("step('classify:Control') reward in [0,1]", _step_task1_control)
@@ -123,7 +123,7 @@ def _step_task2_rank():
     env_instance.reset(task_id=2, patient_id="PT-003")
     result = env_instance.step("rank:[APOE,APP,PSEN1]")
     r = result["reward"]
-    assert 0.0 <= r <= 1.0, f"Reward out of range: {r}"
+    assert 0.0 < r < 1.0, f"Reward out of range: {r}"
 
 
 check("step('rank:[APOE,APP,PSEN1]') reward in [0,1]", _step_task2_rank)
@@ -133,7 +133,7 @@ def _step_task3_downregulate():
     env_instance.reset(task_id=3, patient_id="PT-005")
     result = env_instance.step("downregulate:APOE")
     r = result["reward"]
-    assert 0.0 <= r <= 1.0, f"Reward out of range: {r}"
+    assert 0.0 < r < 1.0, f"Reward out of range: {r}"
     info = result["info"]
     assert "new_risk" in info, "Missing new_risk in info"
     assert info["new_risk"] < info["old_risk"], "Risk should decrease"
@@ -146,7 +146,7 @@ def _step_task3_upregulate():
     env_instance.reset(task_id=3, patient_id="PT-001")
     result = env_instance.step("upregulate:TREM2")
     r = result["reward"]
-    assert 0.0 <= r <= 1.0, f"Reward out of range: {r}"
+    assert 0.0 < r < 1.0, f"Reward out of range: {r}"
 
 
 check("step('upregulate:TREM2') reward in [0,1]", _step_task3_upregulate)
@@ -207,7 +207,7 @@ def _rewards_task1():
         e.reset(task_id=1, patient_id=pid)
         result = e.step(action)
         r = result["reward"]
-        assert 0.0 <= r <= 1.0, f"Reward {r} out of [0,1] for {pid}"
+        assert 0.0 < r < 1.0, f"Reward {r} not in (0,1) for {pid}"
 
 
 check("All Task 1 rewards in [0.0, 1.0]", _rewards_task1)
@@ -220,7 +220,7 @@ def _rewards_task2():
         e.reset(task_id=2, patient_id=pid)
         result = e.step("rank:[APOE,APP,PSEN1]")
         r = result["reward"]
-        assert 0.0 <= r <= 1.0, f"Reward {r} out of [0,1] for {pid}"
+        assert 0.0 < r < 1.0, f"Reward {r} not in (0,1) for {pid}"
 
 
 check("All Task 2 rewards in [0.0, 1.0]", _rewards_task2)
@@ -233,7 +233,7 @@ def _rewards_task3():
         e.reset(task_id=3, patient_id=pid)
         result = e.step("downregulate:APOE")
         r = result["reward"]
-        assert 0.0 <= r <= 1.0, f"Reward {r} out of [0,1] for {pid}"
+        assert 0.0 < r < 1.0, f"Reward {r} not in (0,1) for {pid}"
 
 
 check("All Task 3 rewards in [0.0, 1.0]", _rewards_task3)
@@ -254,7 +254,8 @@ def _yaml_valid():
     for field in required_fields:
         assert field in data, f"Missing field: {field}"
     assert len(data["tasks"]) >= 3, f"Expected 3+ tasks, got {len(data['tasks'])}"
-    assert data["reward_range"] == [0.0, 1.0], f"Wrong reward_range: {data['reward_range']}"
+    rr = data["reward_range"]
+    assert len(rr) == 2 and rr[0] >= 0 and rr[1] <= 1, f"Wrong reward_range: {rr}"
 
 
 check("openenv.yaml is valid YAML with required fields", _yaml_valid)
