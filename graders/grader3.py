@@ -51,7 +51,7 @@ class Grader3:
         # Progress toward target
         max_reduction = old_risk - TARGET
         if max_reduction <= 0:
-            return 0.99  # Already at or below target
+            return 0.95  # Already at or below target
 
         progress = min(1.0, reduction / max_reduction)
 
