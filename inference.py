@@ -160,8 +160,9 @@ def run_episode(env, task_id: int, client) -> dict:
         )
 
     avg_reward = total_reward / max(step_num, 1)
-    score = round(avg_reward * 100, 1)
-    status = "SUCCESS" if score >= 50.0 else "NEEDS_IMPROVEMENT"
+    # Score must be strictly in (0, 1) — not 0.0 or 1.0
+    score = round(max(0.01, min(0.99, avg_reward)), 4)
+    status = "SUCCESS" if score >= 0.50 else "NEEDS_IMPROVEMENT"
 
     print(
         f"[END] task_id={task_id} total_reward={total_reward:.3f} "
@@ -189,17 +190,18 @@ def main():
             results.append(summary)
         except Exception as exc:
             print(f"[ERROR] task_id={task_id} error={exc}", flush=True)
-            results.append({"task_id": task_id, "score": 0.01})
+            results.append({"task_id": task_id, "score": 0.01, "total_reward": 0.01, "avg_reward": 0.01})
 
     # Summary
-    total_score = sum(r.get("score", 0.0) for r in results)
-    avg_score = total_score / len(results)
-    status = "PASS" if avg_score >= 70 else "NEEDS_IMPROVEMENT"
+    avg_score = sum(r.get("score", 0.01) for r in results) / len(results)
+    # Clamp summary score to (0, 1) as well
+    avg_score = round(max(0.01, min(0.99, avg_score)), 4)
+    status = "PASS" if avg_score >= 0.50 else "NEEDS_IMPROVEMENT"
 
     print("", flush=True)
     print("=== INFERENCE COMPLETE ===", flush=True)
     print(f"Tasks run: {len(results)}", flush=True)
-    print(f"Total score: {total_score:.1f} / 300", flush=True)
+    print(f"Average score: {avg_score}", flush=True)
     print(f"Status: {status}", flush=True)
 
 
