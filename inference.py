@@ -1,209 +1,112 @@
-"""
-AlzheimerEnv inference script.
-
-Runs 3 full task episodes using an LLM agent (via OpenAI-compatible client),
-printing [START] / [STEP] / [END] logs to stdout.
-"""
-
-import sys
 import os
+import sys
 import json
-import time
 
-# Ensure local modules are importable
 sys.path.insert(0, os.path.dirname(__file__))
 
-from dotenv import load_dotenv
+from openai import OpenAI
+from environment import AlzheimerEnv
 
-load_dotenv()
+# Environment variables with defaults
+API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4.1-mini")
+HF_TOKEN = os.getenv("HF_TOKEN")
 
-# ---------------------------------------------------------------------------
-# Config from environment variables
-# ---------------------------------------------------------------------------
-API_BASE_URL = os.environ.get("API_BASE_URL", "https://api.anthropic.com")
-MODEL_NAME = os.environ.get("MODEL_NAME", "claude-haiku-4-5-20251001")
-HF_TOKEN = os.environ.get("HF_TOKEN")          # No default — must be set externally
-LOCAL_IMAGE_NAME = os.environ.get("LOCAL_IMAGE_NAME")  # Optional, for from_docker_image()
+if HF_TOKEN is None:
+    raise ValueError("HF_TOKEN environment variable is required")
 
-# Use HF_TOKEN as the API key (passed to OpenAI client)
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY") or HF_TOKEN
+client = OpenAI(
+    base_url=API_BASE_URL,
+    api_key=HF_TOKEN
+)
 
-# ---------------------------------------------------------------------------
-# Task configuration
-# ---------------------------------------------------------------------------
-TASK_CONFIGS = {
-    1: {
-        "system_prompt": (
-            "You are an AI agent in AlzheimerEnv. Classify the patient as AD or Control based on gene expression. "
-            'Reply ONLY with JSON: {"action": "classify:AD", "reasoning": "brief reason under 80 chars"}'
-        ),
-        "fallback_action": "classify:AD",
-        "patient_id": "PT-001",
+TASKS = [
+    {
+        "task_id": 1,
+        "task_name": "risk_classification",
+        "system": "You are an AI agent in AlzheimerEnv. Classify the patient as AD or Control based on gene expression. Reply ONLY with JSON: {\"action\": \"classify:AD\", \"reasoning\": \"brief reason\"}",
+        "fallback": "classify:AD"
     },
-    2: {
-        "system_prompt": (
-            "You are an AI agent in AlzheimerEnv. Rank the top 3 Alzheimer's biomarker genes from the patient data. "
-            'Reply ONLY with JSON: {"action": "rank:[GENE1,GENE2,GENE3]", "reasoning": "brief reason under 80 chars"}'
-        ),
-        "fallback_action": "rank:[APOE,APP,PSEN1]",
-        "patient_id": "PT-003",
+    {
+        "task_id": 2,
+        "task_name": "biomarker_ranking",
+        "system": "You are an AI agent in AlzheimerEnv. Rank the top 3 Alzheimer's biomarker genes. Reply ONLY with JSON: {\"action\": \"rank:[APOE,APP,PSEN1]\", \"reasoning\": \"brief reason\"}",
+        "fallback": "rank:[APOE,APP,PSEN1]"
     },
-    3: {
-        "system_prompt": (
-            "You are an AI agent in AlzheimerEnv. Propose a gene intervention to reduce Alzheimer's risk below 40. "
-            'Reply ONLY with JSON: {"action": "downregulate:GENE or upregulate:GENE", "reasoning": "brief reason under 80 chars"}'
-        ),
-        "fallback_action": "downregulate:APOE",
-        "patient_id": "PT-005",
-    },
-}
+    {
+        "task_id": 3,
+        "task_name": "intervention_planning",
+        "system": "You are an AI agent in AlzheimerEnv. Propose a gene intervention to reduce Alzheimer's risk below 40. Reply ONLY with JSON: {\"action\": \"downregulate:APOE\", \"reasoning\": \"brief reason\"}",
+        "fallback": "downregulate:APOE"
+    }
+]
 
 
-# ---------------------------------------------------------------------------
-# LLM client helper
-# ---------------------------------------------------------------------------
-
-def get_llm_client():
-    """Return an OpenAI-compatible client pointed at API_BASE_URL."""
-    try:
-        from openai import OpenAI
-        api_key = ANTHROPIC_API_KEY if ANTHROPIC_API_KEY else "dummy-key"
-        # Anthropic's API base for OpenAI-compat is /v1
-        base_url = API_BASE_URL.rstrip("/")
-        if not base_url.endswith("/v1"):
-            base_url = base_url + "/v1"
-        client = OpenAI(api_key=api_key, base_url=base_url)
-        return client
-    except Exception:
-        return None
-
-
-def call_llm(client, system_prompt: str, user_message: str, fallback_action: str) -> tuple[str, str]:
-    """
-    Call the LLM and return (action, reasoning).
-    Falls back to fallback_action on any error.
-    """
-    if client is None or not ANTHROPIC_API_KEY:
-        return fallback_action, "Fallback: no API key configured"
-
+def get_action(system_prompt, state, fallback):
     try:
         response = client.chat.completions.create(
             model=MODEL_NAME,
-            max_tokens=128,
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message},
+                {"role": "user", "content": f"Current state: {json.dumps(state)}"}
             ],
-            extra_headers={"anthropic-version": "2023-06-01"},
+            max_tokens=200
         )
-        raw = response.choices[0].message.content.strip()
-        # Try to parse JSON
-        try:
-            data = json.loads(raw)
-            action = str(data.get("action", fallback_action)).strip()
-            reasoning = str(data.get("reasoning", ""))[:80]
-        except json.JSONDecodeError:
-            # Attempt to extract action from raw text
-            action = fallback_action
-            reasoning = raw[:80]
-        return action, reasoning
-    except Exception as exc:
-        return fallback_action, f"Fallback: {str(exc)[:60]}"
+        text = response.choices[0].message.content.strip()
+        text = text.replace("```json", "").replace("```", "").strip()
+        parsed = json.loads(text)
+        return parsed.get("action", fallback), None
+    except Exception as e:
+        return fallback, str(e)
 
 
-# ---------------------------------------------------------------------------
-# Episode runner
-# ---------------------------------------------------------------------------
-
-def run_episode(env, task_id: int, client) -> dict:
-    """Run a full episode for a given task and return summary stats."""
-    cfg = TASK_CONFIGS[task_id]
-    system_prompt = cfg["system_prompt"]
-    fallback_action = cfg["fallback_action"]
-    patient_id = cfg["patient_id"]
-
-    # Reset
-    obs = env.reset(task_id=task_id, patient_id=patient_id)
-
-    initial_risk = obs.get("risk_score", 0.0)
-    max_steps = obs.get("max_steps", 3)
-
-    print(
-        f'[START] task_id={task_id} patient="{obs["patient_id"]}" '
-        f"initial_risk={initial_risk} max_steps={max_steps}",
-        flush=True,
-    )
-
-    total_reward = 0.0
-    step_num = 0
-    done = False
-
-    while not done:
-        # Build user message from current observation
-        user_message = json.dumps(obs, indent=2)
-
-        action, reasoning = call_llm(client, system_prompt, user_message, fallback_action)
-
-        result = env.step(action)
-        reward = result["reward"]
-        done = result["done"]
-        obs = result.get("observation", {})
-        total_reward += reward
-        step_num += 1
-
-        # Truncate reasoning for display
-        reasoning_display = reasoning[:80].replace('"', "'")
-        print(
-            f'[STEP] step={step_num} action="{action}" '
-            f'reasoning="{reasoning_display}" reward={reward:.3f}',
-            flush=True,
-        )
-
-    avg_reward = total_reward / max(step_num, 1)
-    # Score must be strictly in (0, 1) — not 0.0 or 1.0
-    score = round(max(0.01, min(0.99, avg_reward)), 4)
-    status = "SUCCESS" if score >= 0.50 else "NEEDS_IMPROVEMENT"
-
-    print(
-        f"[END] task_id={task_id} total_reward={total_reward:.3f} "
-        f"avg_reward={avg_reward:.3f} score={score} status={status}",
-        flush=True,
-    )
-
-    return {"task_id": task_id, "total_reward": total_reward, "avg_reward": avg_reward, "score": score}
-
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-
-def main():
-    from environment import AlzheimerEnv
-
+def run_episode(task_config):
     env = AlzheimerEnv()
-    client = get_llm_client()
+    task_id = task_config["task_id"]
+    task_name = task_config["task_name"]
 
-    results = []
-    for task_id in [1, 2, 3]:
-        try:
-            summary = run_episode(env, task_id, client)
-            results.append(summary)
-        except Exception as exc:
-            print(f"[ERROR] task_id={task_id} error={exc}", flush=True)
-            results.append({"task_id": task_id, "score": 0.01, "total_reward": 0.01, "avg_reward": 0.01})
+    obs = env.reset(task_id=task_id)
 
-    # Summary
-    avg_score = sum(r.get("score", 0.01) for r in results) / len(results)
-    # Clamp summary score to (0, 1) as well
-    avg_score = round(max(0.01, min(0.99, avg_score)), 4)
-    status = "PASS" if avg_score >= 0.50 else "NEEDS_IMPROVEMENT"
+    print(f"[START] task={task_name} env=AlzheimerEnv model={MODEL_NAME}", flush=True)
 
-    print("", flush=True)
-    print("=== INFERENCE COMPLETE ===", flush=True)
-    print(f"Tasks run: {len(results)}", flush=True)
-    print(f"Average score: {avg_score}", flush=True)
-    print(f"Status: {status}", flush=True)
+    rewards = []
+    steps = 0
+    success = False
+    last_error = None
+
+    try:
+        while True:
+            state = env.state()
+            action, error = get_action(
+                task_config["system"],
+                state,
+                task_config["fallback"]
+            )
+
+            result = env.step(action)
+            reward = float(result["reward"])
+            done = bool(result["done"])
+            steps += 1
+            rewards.append(reward)
+
+            error_str = error if error else "null"
+            done_str = "true" if done else "false"
+
+            print(f"[STEP] step={steps} action={action} reward={reward:.2f} done={done_str} error={error_str}", flush=True)
+
+            if done:
+                success = reward > 0.5
+                break
+
+    except Exception as e:
+        last_error = str(e)
+
+    rewards_str = ",".join([f"{r:.2f}" for r in rewards])
+    success_str = "true" if success else "false"
+    print(f"[END] success={success_str} steps={steps} rewards={rewards_str}", flush=True)
 
 
 if __name__ == "__main__":
-    main()
+    for task in TASKS:
+        run_episode(task)
+        print("", flush=True)
